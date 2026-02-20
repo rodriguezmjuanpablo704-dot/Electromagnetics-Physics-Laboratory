@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Electroscopio — Simulación UMNG</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #080a10;
+  --surface: #0d1018;
+  --card: #111520;
+  --border: #1e2535;
+  --border2: #263045;
+  --text: #d4daf0;
+  --muted: #5a6480;
+  --accent: #4f7cff;
+  --neg: #6b8fff;
+  --neg-glow: rgba(107,143,255,0.35);
+  --pos: #ff6b6b;
+  --pos-glow: rgba(255,107,107,0.35);
+  --gold: #f6c344;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; height: 100vh; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex-shrink: 0; height: 50px;
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-left h1 { font-family: 'Space Mono', monospace; font-size: 0.8rem; color: var(--accent); }
+.tag { font-size: 0.63rem; background: #1a2040; color: var(--muted); border: 1px solid var(--border2); padding: 2px 8px; border-radius: 20px; font-family: 'Space Mono', monospace; }
+.hdr-charge { display: flex; align-items: center; gap: 14px; font-family: 'Space Mono', monospace; font-size: 0.7rem; }
+.hc-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.dot-e { background: var(--neg); box-shadow: 0 0 5px var(--neg-glow); }
+.dot-p { background: var(--pos); box-shadow: 0 0 5px var(--pos-glow); }
+
+.layout { display: grid; grid-template-columns: 206px 1fr 194px; flex: 1; overflow: hidden; }
+
+.panel-left, .panel-right {
+  background: var(--surface); display: flex; flex-direction: column;
+  overflow-y: auto; padding: 13px 11px; gap: 10px;
+}
+.panel-left { border-right: 1px solid var(--border); }
+.panel-right { border-left: 1px solid var(--border); }
+.panel-left::-webkit-scrollbar, .panel-right::-webkit-scrollbar { width: 3px; }
+.panel-left::-webkit-scrollbar-thumb, .panel-right::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+.slabel { font-family: 'Space Mono', monospace; font-size: 0.58rem; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 3px; }
+
+/* Estado del electroscopio — badge visible */
+.status-badge {
+  padding: 8px 10px; border-radius: 7px; font-family: 'Space Mono', monospace; font-size: 0.65rem;
+  text-align: center; border: 1px solid var(--border); background: var(--card);
+  transition: all 0.3s;
+}
+.status-badge.neutro { border-color: var(--muted); color: var(--muted); }
+.status-badge.cargado-neg { border-color: var(--neg); color: var(--neg); background: #0d1528; box-shadow: 0 0 8px rgba(107,143,255,0.15); }
+.status-badge.cargado-pos { border-color: var(--pos); color: var(--pos); background: #180d0d; box-shadow: 0 0 8px rgba(255,107,107,0.15); }
+
+/* Instrucción de fase */
+.fase-box {
+  background: #0c1020; border: 1px solid var(--border2); border-radius: 7px;
+  padding: 9px 10px; font-size: 0.64rem; line-height: 1.6; color: #8898c0;
+}
+.fase-box .fase-num { font-family: 'Space Mono', monospace; color: var(--gold); font-size: 0.7rem; margin-bottom: 3px; }
+
+.mat-btn {
+  display: flex; align-items: center; gap: 8px; padding: 7px 10px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 7px;
+  cursor: pointer; color: #6a7a9a; font-size: 0.73rem; font-family: 'DM Sans', sans-serif;
+  width: 100%; text-align: left; transition: all 0.16s; margin-bottom: 4px;
+}
+.mat-btn:hover { border-color: var(--border2); color: var(--text); }
+.mat-btn.active { border-color: var(--accent); background: #111d35; color: var(--text); }
+.mat-icon { width: 20px; height: 20px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+
+.tela-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.tela-btn {
+  padding: 7px 4px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 7px; cursor: pointer; color: #6a7a9a; font-size: 0.68rem;
+  font-family: 'DM Sans', sans-serif; transition: all 0.16s; text-align: center;
+}
+.tela-btn:hover { border-color: var(--border2); color: var(--text); }
+.tela-btn.active { border-color: var(--accent); background: #111d35; color: var(--text); }
+
+.method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.method-btn {
+  padding: 8px 5px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 7px; cursor: pointer; color: #6a7a9a; font-size: 0.69rem;
+  font-family: 'DM Sans', sans-serif; transition: all 0.16s; text-align: center; line-height:1.3;
+}
+.method-btn:hover { border-color: var(--border2); color: var(--text); }
+.method-btn.active { border-color: var(--accent); background: #111d35; color: var(--text); }
+
+.btn-primary { width:100%; padding:10px; background:linear-gradient(135deg,#1a2e6e,#2a45a0); border:1px solid #3a5adf; border-radius:8px; color:#a8bbff; font-size:0.76rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+.btn-primary:hover { background:linear-gradient(135deg,#1f3680,#3050c0); color:#c4d4ff; }
+.btn-primary:disabled { opacity:0.3; cursor:not-allowed; }
+.btn-verify { width:100%; padding:8px; background:var(--card); border:1px solid var(--border2); border-radius:8px; color:var(--gold); font-size:0.71rem; cursor:pointer; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+.btn-verify:hover { border-color:var(--gold); }
+.btn-verify:disabled { opacity:0.3; cursor:not-allowed; }
+.btn-discharge { width:100%; padding:9px; background:linear-gradient(135deg,#1a0e0e,#3a1a1a); border:1px solid #7a2a2a; border-radius:8px; color:#ff9090; font-size:0.73rem; font-weight:600; cursor:pointer; transition:all 0.2s; font-family:'DM Sans',sans-serif; letter-spacing:0.2px; }
+.btn-discharge:hover { background:linear-gradient(135deg,#220e0e,#4a1e1e); border-color:#cc4444; color:#ffb0b0; }
+.btn-discharge:disabled { opacity:0.35; cursor:not-allowed; }
+.btn-reset { width:100%; padding:7px; background:transparent; border:1px solid var(--border); border-radius:8px; color:var(--muted); font-size:0.68rem; cursor:pointer; transition:all 0.2s; font-family:'DM Sans',sans-serif; }
+.btn-reset:hover { border-color:#ff6b6b55; color:#ff6b6b; }
+.divider { height:1px; background:var(--border); }
+
+/* Segunda barra: acercar una barra conocida para ver respuesta */
+.probe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.probe-btn {
+  padding: 7px 4px; background: var(--card); border: 1px solid var(--border);
+  border-radius: 7px; cursor: pointer; color: #6a7a9a; font-size: 0.66rem;
+  font-family: 'DM Sans', sans-serif; transition: all 0.16s; text-align: center; line-height: 1.35;
+}
+.probe-btn:hover { border-color: var(--border2); color: var(--text); }
+.probe-btn.active { border-color: var(--accent); background: #111d35; color: var(--text); }
+.probe-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.panel-center { position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; background:var(--bg); }
+canvas { display:block; }
+#cvParticles { position:absolute; top:0; left:0; pointer-events:none; }
+
+.hud { position:absolute; bottom:12px; left:50%; transform:translateX(-50%); display:flex; gap:10px; }
+.hud-pill { background:rgba(10,13,22,0.92); border:1px solid var(--border2); border-radius:20px; padding:5px 12px; font-family:'Space Mono',monospace; font-size:0.68rem; display:flex; align-items:center; gap:5px; backdrop-filter:blur(8px); }
+
+.mini-card { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px; }
+.mini-card-title { font-family:'Space Mono',monospace; font-size:0.57rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+.bar-wrap { display:flex; align-items:center; gap:5px; margin-bottom:5px; }
+.bar-lbl { font-size:0.62rem; width:14px; text-align:right; font-family:'Space Mono',monospace; }
+.bar-bg { flex:1; height:5px; background:#0a0d16; border-radius:3px; overflow:hidden; }
+.bar-fill { height:100%; border-radius:3px; transition:width 0.5s cubic-bezier(.4,0,.2,1); }
+.fill-e { background:linear-gradient(90deg,#3a5adf,#6b8fff); }
+.fill-p { background:linear-gradient(90deg,#c0392b,#ff6b6b); }
+.bar-cnt { font-family:'Space Mono',monospace; font-size:0.58rem; width:26px; text-align:right; }
+
+.tribo-item { display:flex; align-items:center; gap:5px; padding:2.5px 0; font-size:0.65rem; }
+.tribo-item.hl { background:#111d35; padding:2.5px 5px; border-radius:4px; }
+.tribo-bar-s { height:3px; border-radius:2px; flex-shrink:0; }
+.tribo-name { flex:1; color:#6a7a9a; }
+.tribo-name.an { color:var(--text); }
+.tribo-sign { font-family:'Space Mono',monospace; font-size:0.57rem; }
+
+.behavior-box { background:#0d1320; border:1px solid var(--border2); border-radius:6px; padding:8px 10px; font-size:0.66rem; line-height:1.6; }
+.b-row { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+.b-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
+.log-list { list-style:none; display:flex; flex-direction:column; gap:3px; max-height:130px; overflow-y:auto; }
+.log-list::-webkit-scrollbar { width:2px; }
+.log-list::-webkit-scrollbar-thumb { background:var(--border2); }
+.log-entry { font-size:0.62rem; padding:3px 6px; border-radius:3px; line-height:1.4; border-left:2px solid var(--border2); }
+.log-entry.neg { border-left-color:var(--neg); color:#8fa8ff; }
+.log-entry.pos { border-left-color:var(--pos); color:#ff9090; }
+.log-entry.info { border-left-color:var(--gold); color:#e0b840; }
+.log-entry.neutral { border-left-color:var(--muted); color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>⚡ ELECTROSCOPIO DE PÉNDULO — Simulación UMNG</h1>
+    <span class="tag">Física EM · Electrostática</span>
+  </div>
+  <div class="hdr-charge">
+    <span><span class="hc-dot dot-e"></span><span id="hdr-e">e⁻ 0</span></span>
+    <span><span class="hc-dot dot-p"></span><span id="hdr-p">p⁺ 0</span></span>
+    <span id="hdr-state" style="color:var(--muted)">NEUTRO</span>
+  </div>
+</header>
+
+<div class="layout">
+
+<!-- ── IZQUIERDA ── -->
+<div class="panel-left">
+
+  <!-- Badge de estado -->
+  <div class="status-badge neutro" id="status-badge">⚬ ELECTROSCOPIO NEUTRO</div>
+
+  <!-- Caja de instrucción de fase -->
+  <div class="fase-box" id="fase-box">
+    <div class="fase-num">FASE 1 — CARGAR</div>
+    Selecciona material, tela y método. Pulsa <strong style="color:#a8bbff">Cargar</strong> para transferir carga al electroscopio. El péndulo permanecerá inmóvil.
+  </div>
+
+  <div class="divider"></div>
+  <div class="slabel">Material / Barra</div>
+  <div id="mat-grid"></div>
+
+  <div class="divider"></div>
+  <div class="slabel">Tela friccionante</div>
+  <div class="tela-grid" id="tela-grid"></div>
+
+  <div class="divider"></div>
+  <div class="slabel">Método de carga</div>
+  <div class="method-grid">
+    <button class="method-btn active" id="m-contacto" onclick="selMethod('contacto')">Contacto<br><span style="color:var(--muted);font-size:0.58rem">directo</span></button>
+    <button class="method-btn" id="m-induccion" onclick="selMethod('induccion')">Inducción<br><span style="color:var(--muted);font-size:0.58rem">electrost.</span></button>
+  </div>
+
+  <div class="divider"></div>
+  <button class="btn-primary" id="btn-charge" onclick="doCharge()">⚡ Cargar electroscopio</button>
+
+  <div class="divider"></div>
+  <div class="slabel">Barra de prueba</div>
+  <div style="font-size:0.6rem;color:var(--muted);margin-bottom:3px">Material:</div>
+  <div class="probe-grid" id="probe-mat-grid"></div>
+  <div style="font-size:0.6rem;color:var(--muted);margin:5px 0 3px">Frotar con:</div>
+  <div class="probe-grid" id="probe-tela-grid"></div>
+  <button class="btn-primary" id="btn-probe" onclick="doProbe()" disabled style="margin-top:6px">🔍 Acercar barra de prueba</button>
+
+  <div class="divider"></div>
+  <button class="btn-discharge" id="btn-discharge" onclick="doDischarge()" disabled>🤚 Descargar (contacto tierra)</button>
+  <button class="btn-reset" onclick="doReset()" style="margin-top:4px">↺ Reiniciar sistema</button>
+
+  <div class="divider"></div>
+  <div class="slabel">Comportamiento del péndulo</div>
+  <div class="behavior-box">
+    <div class="b-row"><div class="b-dot" style="background:var(--pos)"></div><span style="color:#ff9090">Mismo signo → se REPELE (se abre)</span></div>
+    <div class="b-row"><div class="b-dot" style="background:var(--neg)"></div><span style="color:#8fa8ff">Signo opuesto → se ATRAE (se cierra)</span></div>
+    <div class="b-row"><div class="b-dot" style="background:var(--muted)"></div><span style="color:var(--muted)">Neutro → péndulo en reposo vertical</span></div>
+  </div>
+</div>
+
+<!-- ── CENTRO ── -->
+<div class="panel-center">
+  <canvas id="cvMain"></canvas>
+  <canvas id="cvParticles"></canvas>
+  <div class="hud">
+    <div class="hud-pill"><span style="color:var(--muted);font-size:0.6rem">ángulo péndulo</span><span id="hud-angle" style="color:var(--gold);font-size:1rem;font-weight:700">0°</span></div>
+    <div class="hud-pill"><span id="hud-sign" style="color:var(--muted)">NEUTRO</span></div>
+    <div class="hud-pill" id="hud-fase-pill" style="display:none"><span id="hud-fase-t" style="color:var(--gold);font-size:0.63rem"></span></div>
+  </div>
+</div>
+
+<!-- ── DERECHA ── -->
+<div class="panel-right">
+  <div class="slabel">Distribución de carga</div>
+  <div class="mini-card">
+    <div class="mini-card-title">Electroscopio</div>
+    <div class="bar-wrap">
+      <span class="bar-lbl" style="color:var(--neg)">e⁻</span>
+      <div class="bar-bg"><div class="bar-fill fill-e" id="bar-e" style="width:50%"></div></div>
+      <span class="bar-cnt" id="cnt-e" style="color:var(--neg)">0</span>
+    </div>
+    <div class="bar-wrap">
+      <span class="bar-lbl" style="color:var(--pos)">p⁺</span>
+      <div class="bar-bg"><div class="bar-fill fill-p" id="bar-p" style="width:50%"></div></div>
+      <span class="bar-cnt" id="cnt-p" style="color:var(--pos)">0</span>
+    </div>
+  </div>
+
+  <div class="slabel">Átomo conductor</div>
+  <div class="mini-card" style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px;">
+    <canvas id="cvAtom" width="170" height="100"></canvas>
+    <div id="atom-lbl" style="font-size:0.6rem;color:var(--muted);text-align:center">Estado: neutro</div>
+  </div>
+
+  <div class="slabel">Serie triboéléctrica</div>
+  <div class="mini-card" id="tribo-card" style="padding:8px 10px;"></div>
+
+  <div class="slabel">Bitácora</div>
+  <div class="mini-card" style="flex:1;padding:8px;">
+    <ul class="log-list" id="log"></ul>
+  </div>
+</div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATOS
+// ═══════════════════════════════════════════════
+const MATERIALS = [
+  { id:'vidrio',    name:'Barra Vidrio',    icon:'🔵', color:'#80cbc4', triboPos:  4 },
+  { id:'ebonita',   name:'Barra Ebonita',   icon:'⬛', color:'#90a4ae', triboPos: -4 },
+  { id:'baquelita', name:'Tubo Baquelita',  icon:'🟤', color:'#bcaaa4', triboPos: -3 },
+  { id:'pvc',       name:'Tubo PVC',        icon:'⬜', color:'#b0bec5', triboPos: -5 },
+];
+const TELAS = [
+  { id:'seda',        name:'Seda',        icon:'🟡', triboPos:  3 },
+  { id:'algodon',     name:'Algodón',     icon:'⚪', triboPos:  2 },
+  { id:'terciopelo',  name:'Terciopelo',  icon:'🟣', triboPos:  1 },
+  { id:'pelo_conejo', name:'Pelo conejo', icon:'🐰', triboPos:  5 },
+];
+const TRIBO = [
+  { name:'Pelo conejo', pos:5,   color:'#ff9a9a', id:'pelo_conejo' },
+  { name:'Lana / Piel', pos:4.5, color:'#ffb74d' },
+  { name:'Vidrio',      pos:4,   color:'#80cbc4', id:'vidrio' },
+  { name:'Seda',        pos:3,   color:'#fff176', id:'seda' },
+  { name:'Algodón',     pos:2,   color:'#e0e0e0', id:'algodon' },
+  { name:'Terciopelo',  pos:1,   color:'#ce93d8', id:'terciopelo' },
+  { name:'— NEUTRO —',  pos:0,   color:'#546e7a' },
+  { name:'Baquelita',   pos:-3,  color:'#bcaaa4', id:'baquelita' },
+  { name:'Ebonita',     pos:-4,  color:'#90a4ae', id:'ebonita' },
+  { name:'PVC / PTFE',  pos:-5,  color:'#b0bec5', id:'pvc' },
+];
+
+// Materiales de barra de prueba
+const PROBE_MATS = [
+  { id:'vidrio',    name:'Vidrio',    icon:'🔵', color:'#80cbc4', triboPos:  4 },
+  { id:'ebonita',   name:'Ebonita',   icon:'⬛', color:'#90a4ae', triboPos: -4 },
+  { id:'baquelita', name:'Baquelita', icon:'🟤', color:'#bcaaa4', triboPos: -3 },
+  { id:'pvc',       name:'PVC',       icon:'⬜', color:'#b0bec5', triboPos: -5 },
+  { id:'neutro',    name:'Neutro',    icon:'⚬',  color:'#546e7a', triboPos:  0 },
+];
+// Telas para frotar la barra de prueba
+const PROBE_TELAS = [
+  { id:'seda',        name:'Seda',        icon:'🟡', triboPos:  3 },
+  { id:'algodon',     name:'Algodón',     icon:'⚪', triboPos:  2 },
+  { id:'terciopelo',  name:'Terciopelo',  icon:'🟣', triboPos:  1 },
+  { id:'pelo_conejo', name:'Pelo conejo', icon:'🐰', triboPos:  5 },
+  { id:'ninguna',     name:'Sin frotar',  icon:'✋', triboPos:  0 },
+];
+
+// ═══════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════
+// fase 0 = neutro, 1 = cargado (péndulo quieto), 2 = barra probe acercada (péndulo reacciona)
+const S = {
+  material:'vidrio', tela:'seda', method:'contacto',
+  charge: 0,         // carga almacenada en el electroscopio
+  fase: 0,           // 0 neutro | 1 cargado | 2 interacción
+  probeMat: 'vidrio',   // material de la barra de prueba
+  probeTela: 'seda',   // tela con que se frota la barra de prueba
+  probeSign: 0,        // signo calculado de la barra de prueba (solo en fase 2)
+  pendAngle: 0,
+  targetPendAngle: 0,
+  barVisible: false, barX: 9999, barCharge: 0,
+  probeVisible: false, probeX: 9999, probeCharge: 0,
+  animating: false,
+  groundActive: false, groundAlpha: 0,
+  discharging: false, cableProgress: 0, cableGlow: 0, cableParticleTimer: 0,
+};
+const particles = [];
+
+// ═══════════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════════
+const cvM = document.getElementById('cvMain');
+const cvP = document.getElementById('cvParticles');
+const cvA = document.getElementById('cvAtom');
+const ctxM = cvM.getContext('2d');
+const ctxP = cvP.getContext('2d');
+const ctxA = cvA.getContext('2d');
+
+function resize() {
+  const c = document.querySelector('.panel-center');
+  cvM.width = cvP.width = c.clientWidth;
+  cvM.height = cvP.height = c.clientHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function SC() { return { x: cvM.width/2, y: cvM.height/2 + 10 }; }
+
+// ═══════════════════════════════════════════════
+// BUILD UI
+// ═══════════════════════════════════════════════
+function buildUI() {
+  const mg = document.getElementById('mat-grid');
+  MATERIALS.forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'mat-btn' + (m.id===S.material?' active':'');
+    b.id = 'mat-'+m.id;
+    b.innerHTML = `<span class="mat-icon" style="background:${m.color}20;border:1px solid ${m.color}50">${m.icon}</span>${m.name}`;
+    b.onclick = () => selMat(m.id);
+    mg.appendChild(b);
+  });
+  const tg = document.getElementById('tela-grid');
+  TELAS.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'tela-btn' + (t.id===S.tela?' active':'');
+    b.id = 'tela-'+t.id;
+    b.innerHTML = `${t.icon} ${t.name}`;
+    b.onclick = () => selTela(t.id);
+    tg.appendChild(b);
+  });
+  // Probe mat grid
+  const pg = document.getElementById('probe-mat-grid');
+  PROBE_MATS.forEach(pr => {
+    const b = document.createElement('button');
+    b.className = 'probe-btn' + (pr.id===S.probeMat?' active':'');
+    b.id = 'probemat-'+pr.id;
+    b.innerHTML = `${pr.icon} ${pr.name}`;
+    b.onclick = () => selProbeMat(pr.id);
+    b.disabled = true;
+    pg.appendChild(b);
+  });
+  // Probe tela grid
+  const ptg = document.getElementById('probe-tela-grid');
+  PROBE_TELAS.forEach(pt => {
+    const b = document.createElement('button');
+    b.className = 'probe-btn' + (pt.id===S.probeTela?' active':'');
+    b.id = 'probetela-'+pt.id;
+    b.innerHTML = `${pt.icon} ${pt.name}`;
+    b.onclick = () => selProbeTela(pt.id);
+    b.disabled = true;
+    ptg.appendChild(b);
+  });
+  buildTribo();
+}
+
+function buildTribo() {
+  const card = document.getElementById('tribo-card');
+  card.innerHTML = '';
+  TRIBO.forEach(t => {
+    const isAct = (t.id===S.material || t.id===S.tela);
+    const d = document.createElement('div');
+    d.className = 'tribo-item' + (isAct?' hl':'');
+    const bw = Math.max(3, Math.round(Math.abs(t.pos)/5*42));
+    d.innerHTML = `
+      <div class="tribo-bar-s" style="width:${bw}px;background:${t.color};opacity:${isAct?1:0.4}"></div>
+      <span class="tribo-name${isAct?' an':''}">${t.name}</span>
+      <span class="tribo-sign" style="color:${t.pos>0?'var(--pos)':t.pos<0?'var(--neg)':'var(--muted)'}">
+        ${t.pos>0?'+'.repeat(Math.min(3,Math.round(t.pos))):t.pos<0?'−'.repeat(Math.min(3,Math.round(-t.pos))):'·'}
+      </span>`;
+    card.appendChild(d);
+  });
+}
+
+function selMat(id){ S.material=id; document.querySelectorAll('.mat-btn').forEach(b=>b.classList.remove('active')); document.getElementById('mat-'+id).classList.add('active'); buildTribo(); }
+function selTela(id){ S.tela=id; document.querySelectorAll('.tela-btn').forEach(b=>b.classList.remove('active')); document.getElementById('tela-'+id).classList.add('active'); buildTribo(); }
+function selMethod(id){ S.method=id; document.getElementById('m-contacto').classList.toggle('active',id==='contacto'); document.getElementById('m-induccion').classList.toggle('active',id==='induccion'); }
+function selProbeMat(id){
+  if(S.fase < 1) return;
+  S.probeMat=id;
+  document.querySelectorAll('[id^="probemat-"]').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('probemat-'+id);
+  if(btn) btn.classList.add('active');
+}
+function selProbeTela(id){
+  if(S.fase < 1) return;
+  S.probeTela=id;
+  document.querySelectorAll('[id^="probetela-"]').forEach(b=>b.classList.remove('active'));
+  const btn = document.getElementById('probetela-'+id);
+  if(btn) btn.classList.add('active');
+}
+function getProbeCharge() {
+  const m = PROBE_MATS.find(x=>x.id===S.probeMat);
+  const t = PROBE_TELAS.find(x=>x.id===S.probeTela);
+  if(!m || !t) return 0;
+  return m.triboPos - t.triboPos;
+}
+
+// ═══════════════════════════════════════════════
+// CARGA TRIBOÉLÉCTRICA
+// ═══════════════════════════════════════════════
+function getBarCharge() {
+  const m = MATERIALS.find(x=>x.id===S.material);
+  const t = TELAS.find(x=>x.id===S.tela);
+  return (m&&t) ? m.triboPos - t.triboPos : 0;
+}
+
+// ═══════════════════════════════════════════════
+// FASE 1 — CARGAR ELECTROSCOPIO
+// El péndulo NO se mueve. Solo se transfiere carga.
+// ═══════════════════════════════════════════════
+function doCharge() {
+  if (S.animating || S.discharging) return;
+  const raw = getBarCharge();
+  S.barCharge = raw;
+
+  let finalCharge;
+  if (S.method==='contacto') {
+    finalCharge = Math.max(-100, Math.min(100, raw*14));
+  } else {
+    // Inducción: el electroscopio queda con carga opuesta a la barra
+    finalCharge = Math.max(-100, Math.min(100, -raw*8));
+  }
+
+  S.charge = finalCharge;
+  S.fase = 1;
+  // Péndulo QUIETO en fase 1 — la carga está distribuida uniformemente en la varilla
+  // No hay repulsión porque el péndulo está en el mismo conductor que la varilla fija.
+  // Históricamente así funciona el electroscopio Eisco: solo reacciona ante una carga externa.
+  S.targetPendAngle = 0;
+
+  const m = MATERIALS.find(x=>x.id===S.material);
+  const t = TELAS.find(x=>x.id===S.tela);
+  const sl = finalCharge<0?'NEGATIVA (−)':finalCharge>0?'POSITIVA (+)':'NULA';
+  const sc = finalCharge<0?'neg':finalCharge>0?'pos':'neutral';
+  const metodo = S.method==='contacto'?'contacto directo':'inducción electrostática';
+
+  addLog(`Cargado: ${m.name} + ${t.name} → ${metodo} → electroscopio con carga ${sl}.`, sc);
+  addLog('Péndulo en reposo — carga distribuida uniformemente. Acerca una barra de prueba para observar respuesta.', 'info');
+
+  // Animar la barra acercándose y transfiriendo carga
+  S.animating = true;
+  S.barVisible = true;
+  S.barX = cvM.width + 30;
+  const sc2 = SC();
+  const targetX = S.method==='contacto' ? sc2.x + 8 : sc2.x + 55;
+  let x = S.barX;
+
+  function approach() {
+    x -= 3.5; S.barX = x;
+    if (Math.random()<0.28) spawnBarParticles();
+    if (x > targetX) { requestAnimationFrame(approach); }
+    else {
+      if (S.method==='induccion') { S.groundActive=true; S.groundAlpha=0; setTimeout(()=>{ S.groundActive=false; },700); }
+      spawnTransfer(finalCharge, x, sc2);
+      setTimeout(()=>{
+        // Péndulo NO se mueve — animPendulum quedaría en 0
+        let rx = x;
+        function retract(){ rx+=5; S.barX=rx; if(rx<cvM.width+60) requestAnimationFrame(retract); else { S.barVisible=false; S.animating=false; } }
+        retract();
+      }, 520);
+    }
+  }
+  requestAnimationFrame(approach);
+}
+
+// ═══════════════════════════════════════════════
+// FASE 2 — ACERCAR BARRA DE PRUEBA
+// Aquí el péndulo reacciona por repulsión o atracción.
+// ═══════════════════════════════════════════════
+function doProbe() {
+  if (S.animating || S.discharging || S.fase < 1) return;
+  const mat = PROBE_MATS.find(p=>p.id===S.probeMat);
+  const tela = PROBE_TELAS.find(p=>p.id===S.probeTela);
+  if (!mat) return;
+
+  // Calcular carga de la barra de prueba por triboeléctrica
+  const rawProbeCharge = getProbeCharge();
+  const probeSign = rawProbeCharge === 0 ? 0 : Math.sign(rawProbeCharge);
+  S.probeSign = probeSign;
+  S.probeCharge = rawProbeCharge * 14;
+
+  S.fase = 2;
+
+  // Lógica física del péndulo al acercar la barra de prueba
+  let targetAngle = 0;
+  const mag = Math.abs(S.charge);
+
+  if (probeSign === 0) {
+    targetAngle = 0;
+  } else if (Math.sign(probeSign) === Math.sign(S.charge)) {
+    targetAngle = Math.min(44, mag * 0.42);   // mismo signo → repulsión → se abre
+  } else {
+    targetAngle = -Math.min(18, mag * 0.18);  // signo opuesto → atracción → se cierra
+  }
+
+  S.targetPendAngle = targetAngle;
+
+  // Log
+  const telaStr = tela && tela.id !== 'ninguna' ? ` frotada con ${tela.name}` : ' sin frotar';
+  let logMsg, logType;
+  if (probeSign === 0) {
+    logMsg = `Barra ${mat.name}${telaStr} → sin carga → péndulo en reposo.`;
+    logType = 'neutral';
+  } else if (Math.sign(probeSign) === Math.sign(S.charge)) {
+    const signoStr = S.charge < 0 ? 'NEGATIVA' : 'POSITIVA';
+    const probeSignStr = probeSign < 0 ? '(−)' : '(+)';
+    logMsg = `Barra ${mat.name}${telaStr} → carga ${probeSignStr} → MISMO signo que electroscopio (${signoStr}) → REPULSIÓN → péndulo se ABRE ${Math.abs(Math.round(targetAngle))}°.`;
+    logType = S.charge < 0 ? 'neg' : 'pos';
+  } else {
+    const signoEsc = S.charge < 0 ? 'NEGATIVA' : 'POSITIVA';
+    const probeSignStr = probeSign < 0 ? '(−)' : '(+)';
+    logMsg = `Barra ${mat.name}${telaStr} → carga ${probeSignStr} → signo OPUESTO a electroscopio (${signoEsc}) → ATRACCIÓN → péndulo se CIERRA ${Math.abs(Math.round(targetAngle))}°.`;
+    logType = probeSign < 0 ? 'neg' : 'pos';
+  }
+  addLog(logMsg, logType);
+
+  // Animar barra de prueba entrando desde la izquierda (lado contrario a la barra de carga)
+  S.animating = true;
+  S.probeVisible = true;
+  S.probeX = -30;
+  const sc2 = SC();
+  const probeTargetX = sc2.x - 95;  // se queda a cierta distancia, no toca
+  let px = S.probeX;
+
+  function approachProbe() {
+    px += 3.5; S.probeX = px;
+    if (px < probeTargetX) { requestAnimationFrame(approachProbe); }
+    else {
+      // Lanzar partículas de interacción
+      if (S.probeSign !== 0) spawnInteractionParticles(sc2);
+      animPendulum();
+      // La barra se queda un rato y luego se retira
+      setTimeout(()=>{
+        let rx = px;
+        function retractProbe(){
+          rx -= 4.5; S.probeX = rx;
+          if(rx > -60) requestAnimationFrame(retractProbe);
+          else { S.probeVisible = false; S.animating = false; }
+        }
+        retractProbe();
+      }, 1800);
+    }
+  }
+  requestAnimationFrame(approachProbe);
+}
+
+function spawnInteractionParticles(sc) {
+  const n = 6;
+  const probeSign = S.probeSign;
+  for (let i=0; i<n; i++) {
+    setTimeout(()=>{
+      const pivotY = sc.y - 10;
+      const pendLen = 68;
+      const pendAngleRad = (S.pendAngle * Math.PI) / 180;
+      const pendEndX = sc.x + Math.sin(pendAngleRad) * pendLen;
+      const pendEndY = pivotY + Math.cos(pendAngleRad) * pendLen;
+      const isSameSign = Math.sign(probeSign) === Math.sign(S.charge);
+      particles.push({
+        x: S.probeX + 34, y: sc.y - 60 + Math.random()*40,
+        targetX: isSameSign ? pendEndX + (Math.random()-.5)*20 : sc.x,
+        targetY: isSameSign ? pendEndY + (Math.random()-.5)*20 : sc.y - 110,
+        vx:0, vy:0, life:70, maxLife:70,
+        type: probeSign < 0 ? 'e' : 'p', size:4.5, mode:'homing', trail:[]
+      });
+    }, i*60);
+  }
+}
+
+// ═══════════════════════════════════════════════
+// DESCARGA A TIERRA
+// ═══════════════════════════════════════════════
+function doDischarge() {
+  if (S.animating || S.discharging || S.charge === 0) return;
+  S.discharging = true;
+  S.animating   = true;
+  S.cableProgress = 0;
+  S.cableGlow     = 0;
+  S.cableParticleTimer = 0;
+
+  addLog('Descarga: cable conectado a tierra — electrones fluyen hacia GND.', S.charge < 0 ? 'neg' : 'pos');
+
+  const sc = SC();
+  const cableStartX = sc.x;
+  const cableStartY = sc.y - 104;
+  const cableEndY   = sc.y + 108 + 60;
+  const chargeSign  = Math.sign(S.charge);
+
+  const phase1Duration = 600;
+  const phase2Duration = 900;
+  const startTime = performance.now();
+
+  function tick(now) {
+    const elapsed = now - startTime;
+    if (elapsed < phase1Duration) {
+      S.cableProgress = elapsed / phase1Duration;
+      S.cableGlow = 0;
+      requestAnimationFrame(tick);
+    } else if (elapsed < phase1Duration + phase2Duration) {
+      S.cableProgress = 1;
+      const t2 = elapsed - phase1Duration;
+      S.cableGlow = Math.sin((t2 / phase2Duration) * Math.PI);
+      S.cableParticleTimer += 1;
+      if (S.cableParticleTimer % 4 === 0) {
+        const pendAngleRad = (S.pendAngle * Math.PI) / 180;
+        const pendLen = 68;
+        const pivotY  = sc.y - 10;
+        const px2 = sc.x + Math.sin(pendAngleRad) * pendLen;
+        const py2 = pivotY + Math.cos(pendAngleRad) * pendLen;
+        particles.push({
+          x: px2 + (Math.random() - 0.5) * 8, y: py2,
+          targetX: sc.x + (Math.random() - 0.5) * 6, targetY: cableEndY,
+          vx: 0, vy: 0, life: 70, maxLife: 70,
+          type: chargeSign < 0 ? 'e' : 'p', size: 4.5, mode: 'homing', trail: []
+        });
+      }
+      requestAnimationFrame(tick);
+    } else {
+      S.cableGlow = 0;
+      S.cableProgress = 1;
+      S.charge = 0;
+      S.fase = 0;
+      S.targetPendAngle = 0;
+      animPendulum();
+      const retractStart = performance.now();
+      function retractCable(now2) {
+        const r = now2 - retractStart;
+        S.cableProgress = Math.max(0, 1 - r / 400);
+        if (S.cableProgress > 0) { requestAnimationFrame(retractCable); }
+        else {
+          S.cableProgress = 0;
+          S.discharging = false;
+          S.animating   = false;
+          addLog('Descarga completa — electroscopio neutro. Péndulo en reposo.', 'neutral');
+        }
+      }
+      requestAnimationFrame(retractCable);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+// ═══════════════════════════════════════════════
+// PARTÍCULAS
+// ═══════════════════════════════════════════════
+function spawnBarParticles() {
+  const sc=SC(); const sign=S.barCharge<0?-1:1;
+  particles.push({ x:S.barX-5+Math.random()*25, y:sc.y-110+Math.random()*80,
+    vx:(Math.random()-.5)*1.3, vy:(Math.random()-.5)*1.3,
+    life:38, maxLife:38, type:sign<0?'e':'p', size:4.5, mode:'free', trail:[] });
+}
+
+function spawnTransfer(charge, fromX, sc) {
+  const n = Math.round(Math.abs(charge)/10)+5;
+  for(let i=0;i<n;i++) {
+    setTimeout(()=>{
+      particles.push({ x:fromX, y:sc.y-90+Math.random()*40,
+        targetX:sc.x+(Math.random()-.5)*16, targetY:sc.y-110,
+        vx:0,vy:0, life:60,maxLife:60, type:charge<0?'e':'p', size:5.5, mode:'homing', trail:[] });
+      setTimeout(()=>{
+        particles.push({ x:sc.x+(Math.random()-.5)*8, y:sc.y-85,
+          targetX:sc.x+(Math.random()-.5)*10, targetY:sc.y+20+Math.random()*40,
+          vx:0,vy:0, life:75,maxLife:75, type:charge<0?'e':'p', size:4.5, mode:'homing', trail:[] });
+      }, 80+Math.random()*160);
+    }, i*55);
+  }
+}
+
+function updateParticles() {
+  for(let i=particles.length-1;i>=0;i--) {
+    const p=particles[i];
+    p.trail.push({x:p.x,y:p.y});
+    if(p.trail.length>9) p.trail.shift();
+    if(p.mode==='homing'){ p.x+=(p.targetX-p.x)*0.13; p.y+=(p.targetY-p.y)*0.13; }
+    else { p.x+=p.vx; p.y+=p.vy; p.vx*=0.95; p.vy*=0.95; }
+    p.life--;
+    if(p.life<=0) particles.splice(i,1);
+  }
+}
+
+function drawParticles() {
+  ctxP.clearRect(0,0,cvP.width,cvP.height);
+  particles.forEach(p=>{
+    const a=p.life/p.maxLife;
+    const col=p.type==='e'?`rgba(107,143,255,${a})`:`rgba(255,107,107,${a})`;
+    if(p.trail.length>1){
+      ctxP.beginPath(); ctxP.moveTo(p.trail[0].x,p.trail[0].y);
+      p.trail.forEach(pt=>ctxP.lineTo(pt.x,pt.y));
+      ctxP.strokeStyle=col.replace(`,${a})`,`,${a*.22})`); ctxP.lineWidth=1.8; ctxP.stroke();
+    }
+    ctxP.beginPath(); ctxP.arc(p.x,p.y,p.size+3.5,0,Math.PI*2);
+    ctxP.fillStyle=p.type==='e'?`rgba(107,143,255,${a*.22})`:`rgba(255,107,107,${a*.22})`; ctxP.fill();
+    ctxP.beginPath(); ctxP.arc(p.x,p.y,p.size,0,Math.PI*2); ctxP.fillStyle=col; ctxP.fill();
+    ctxP.fillStyle=`rgba(255,255,255,${a*.95})`; ctxP.font=`bold ${p.size*1.9}px Space Mono`;
+    ctxP.textAlign='center'; ctxP.textBaseline='middle';
+    ctxP.fillText(p.type==='e'?'−':'+',p.x,p.y);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// ÁTOMO
+// ═══════════════════════════════════════════════
+let atomAngle=0;
+function drawAtom() {
+  const w=cvA.width,h=cvA.height; ctxA.clearRect(0,0,w,h);
+  ctxA.fillStyle='#090c14'; ctxA.fillRect(0,0,w,h);
+  const cx=w/2,cy=h/2, c=S.charge;
+  const eCount=Math.max(1,8-Math.round(c/20));
+  const ng=ctxA.createRadialGradient(cx,cy,1,cx,cy,12);
+  ng.addColorStop(0,'#ff7070'); ng.addColorStop(1,'#aa2020');
+  ctxA.beginPath(); ctxA.arc(cx,cy,12,0,Math.PI*2); ctxA.fillStyle=ng; ctxA.fill();
+  for(let i=0;i<5;i++){
+    const a=(i/5)*Math.PI*2,r=5;
+    ctxA.beginPath(); ctxA.arc(cx+r*Math.cos(a),cy+r*Math.sin(a),2,0,Math.PI*2);
+    ctxA.fillStyle='#ff4444'; ctxA.fill();
+    ctxA.fillStyle='rgba(255,255,255,0.9)'; ctxA.font='bold 5px Space Mono';
+    ctxA.textAlign='center'; ctxA.textBaseline='middle';
+    ctxA.fillText('+',cx+r*Math.cos(a),cy+r*Math.sin(a));
+  }
+  [[25,3],[39,5]].forEach(([r,max],oi)=>{
+    ctxA.beginPath(); ctxA.arc(cx,cy,r,0,Math.PI*2);
+    ctxA.strokeStyle='rgba(107,143,255,0.12)'; ctxA.lineWidth=1; ctxA.stroke();
+    const here=Math.min(eCount-(oi===0?0:3),max);
+    for(let i=0;i<Math.max(0,here);i++){
+      const a=atomAngle*(oi===0?1:-0.65)+(i/here)*Math.PI*2;
+      const ex=cx+r*Math.cos(a),ey=cy+r*Math.sin(a);
+      ctxA.beginPath(); ctxA.arc(ex,ey,5,0,Math.PI*2);
+      ctxA.fillStyle='rgba(107,143,255,0.18)'; ctxA.fill();
+      ctxA.beginPath(); ctxA.arc(ex,ey,3.5,0,Math.PI*2);
+      ctxA.fillStyle='rgba(107,143,255,0.9)'; ctxA.fill();
+      ctxA.fillStyle='rgba(210,225,255,0.95)'; ctxA.font='bold 6px Space Mono';
+      ctxA.textAlign='center'; ctxA.textBaseline='middle';
+      ctxA.fillText('−',ex,ey);
+    }
+  });
+  let lbl='Estado: neutro (e⁻ = p⁺)';
+  if(c<-5) lbl='Exceso e⁻ → carga negativa';
+  if(c>5)  lbl='Déficit e⁻ → carga positiva';
+  document.getElementById('atom-lbl').textContent=lbl;
+}
+
+// ═══════════════════════════════════════════════
+// DIBUJO PRINCIPAL
+// ═══════════════════════════════════════════════
+function drawMain() {
+  const w=cvM.width,h=cvM.height;
+  ctxM.clearRect(0,0,w,h);
+  ctxM.fillStyle='#080a10'; ctxM.fillRect(0,0,w,h);
+  ctxM.strokeStyle='rgba(22,30,50,0.7)'; ctxM.lineWidth=0.5;
+  for(let x2=0;x2<w;x2+=30){ ctxM.beginPath(); ctxM.moveTo(x2,0); ctxM.lineTo(x2,h); ctxM.stroke(); }
+  for(let y2=0;y2<h;y2+=30){ ctxM.beginPath(); ctxM.moveTo(0,y2); ctxM.lineTo(w,y2); ctxM.stroke(); }
+
+  const sc=SC(); const cx=sc.x, cy=sc.y;
+  const RO=102;
+
+  if(S.groundActive){ S.groundAlpha=Math.min(1,S.groundAlpha+0.08); drawGround(ctxM,cx,cy+RO+50,S.groundAlpha); }
+
+  // ── BASE ──
+  const bg=ctxM.createLinearGradient(cx-80,cy+RO+20,cx-80,cy+RO+68);
+  bg.addColorStop(0,'#33444f'); bg.addColorStop(1,'#1a2530');
+  ctxM.fillStyle=bg; rr(ctxM,cx-80,cy+RO+20,160,48,8); ctxM.fill();
+  ctxM.strokeStyle='#3d5565'; ctxM.lineWidth=1.5; rr(ctxM,cx-80,cy+RO+20,160,48,8); ctxM.stroke();
+  ctxM.fillStyle='#5a7580'; ctxM.font='bold 10px Space Mono';
+  ctxM.textAlign='center'; ctxM.fillText('eisco',cx,cy+RO+50);
+  ctxM.fillStyle='#e53935'; ctxM.beginPath(); ctxM.arc(cx-35,cy+RO+35,8,0,Math.PI*2); ctxM.fill();
+  ctxM.fillStyle='#ff8a80'; ctxM.font='9px Space Mono'; ctxM.textAlign='center'; ctxM.textBaseline='middle';
+  ctxM.fillText('+',cx-35,cy+RO+35);
+  const sg=ctxM.createRadialGradient(cx+38,cy+RO+32,1,cx+38,cy+RO+35,10);
+  sg.addColorStop(0,'#cfd8dc'); sg.addColorStop(1,'#78909c');
+  ctxM.fillStyle=sg; ctxM.beginPath(); ctxM.arc(cx+38,cy+RO+35,10,0,Math.PI*2); ctxM.fill();
+
+  // ── SOPORTE ──
+  const supg=ctxM.createLinearGradient(cx-5,0,cx+5,0);
+  supg.addColorStop(0,'#28383f'); supg.addColorStop(0.5,'#5a7a88'); supg.addColorStop(1,'#28383f');
+  ctxM.fillStyle=supg;
+  rr(ctxM,cx-4, cy+RO+20, 8, -(RO*2+40), 2); ctxM.fill();
+
+  // ── ARO ──
+  ctxM.beginPath(); ctxM.arc(cx,cy,RO,0,Math.PI*2);
+  ctxM.strokeStyle='#151e2c'; ctxM.lineWidth=22; ctxM.stroke();
+  ctxM.beginPath(); ctxM.arc(cx,cy,RO,0,Math.PI*2);
+  ctxM.strokeStyle='#1e2e3f'; ctxM.lineWidth=17; ctxM.stroke();
+  ctxM.beginPath(); ctxM.arc(cx,cy,RO,0,Math.PI*2);
+  ctxM.strokeStyle='#2a4055'; ctxM.lineWidth=2.5; ctxM.stroke();
+  ctxM.beginPath(); ctxM.arc(cx,cy,RO-12,0,Math.PI*2); ctxM.fillStyle='#070910'; ctxM.fill();
+
+  // ── PLACA ──
+  const plateY = cy - RO - 10;
+  const pg=ctxM.createRadialGradient(cx,plateY,2,cx,plateY,36);
+  pg.addColorStop(0,'#dde8ec'); pg.addColorStop(1,'#6888a0');
+  ctxM.beginPath(); ctxM.ellipse(cx,plateY,36,6,0,0,Math.PI*2);
+  ctxM.fillStyle=pg; ctxM.fill();
+  ctxM.strokeStyle='#88aac0'; ctxM.lineWidth=1; ctxM.stroke();
+  if(S.charge!==0){
+    const sym=S.charge<0?'−':'+';
+    const col=S.charge<0?'var(--neg)':'var(--pos)';
+    ctxM.fillStyle=col; ctxM.font='bold 11px Space Mono';
+    ctxM.textAlign='center'; ctxM.textBaseline='middle';
+    ctxM.fillText(sym,cx-18,plateY); ctxM.fillText(sym,cx+18,plateY);
+  }
+
+  // ── BARRA PRINCIPAL (fija) ──
+  const barTopY  = plateY + 8;
+  const pivotY   = cy - 10;
+  const barBotY  = cy + RO*0.35;
+  const barg=ctxM.createLinearGradient(cx-4,0,cx+4,0);
+  barg.addColorStop(0,'#507080'); barg.addColorStop(0.4,'#a8c8d0'); barg.addColorStop(1,'#406070');
+  ctxM.fillStyle=barg;
+  rr(ctxM,cx-3.5,barTopY,7,barBotY-barTopY,2); ctxM.fill();
+  if(S.charge!==0){
+    const sym=S.charge<0?'−':'+';
+    const col=S.charge<0?'rgba(107,143,255,0.85)':'rgba(255,107,107,0.85)';
+    ctxM.fillStyle=col; ctxM.font='9px Space Mono'; ctxM.textAlign='center'; ctxM.textBaseline='middle';
+    [barTopY+20, barTopY+42, barTopY+64].forEach((y,i)=>{ ctxM.fillText(sym,cx+(i%2===0?-9:9),y); });
+  }
+
+  // ── PIVOTE ──
+  ctxM.beginPath(); ctxM.arc(cx,pivotY,5,0,Math.PI*2);
+  ctxM.fillStyle='#d0dde8'; ctxM.fill();
+  ctxM.strokeStyle='#88aac0'; ctxM.lineWidth=1; ctxM.stroke();
+
+  // ── PÉNDULO ──
+  const pendLen = 68;
+  const pendAngle = S.pendAngle;
+  const pendAngleRad = (pendAngle * Math.PI) / 180;
+  const pendEndX = cx + Math.sin(pendAngleRad) * pendLen;
+  const pendEndY = pivotY + Math.cos(pendAngleRad) * pendLen;
+
+  const pendg=ctxM.createLinearGradient(cx-3,0,cx+3,0);
+  pendg.addColorStop(0,'#506878'); pendg.addColorStop(0.4,'#90b8c8'); pendg.addColorStop(1,'#405868');
+  const dx=pendEndX-cx, dy=pendEndY-pivotY;
+  const len2=Math.sqrt(dx*dx+dy*dy);
+  const nx=-dy/len2, ny=dx/len2;
+  const hw=3;
+  ctxM.beginPath();
+  ctxM.moveTo(cx+nx*hw, pivotY+ny*hw);
+  ctxM.lineTo(cx-nx*hw, pivotY-ny*hw);
+  ctxM.lineTo(pendEndX-nx*hw, pendEndY-ny*hw);
+  ctxM.lineTo(pendEndX+nx*hw, pendEndY+ny*hw);
+  ctxM.closePath();
+  ctxM.fillStyle=pendg; ctxM.fill();
+
+  // Bolita del péndulo
+  let pendGlowCol = 'transparent';
+  let pendFillCol = '#90a8b8';
+  if(S.charge<-5){ pendGlowCol='rgba(107,143,255,0.5)'; pendFillCol='#7090ff'; }
+  if(S.charge>5) { pendGlowCol='rgba(255,107,107,0.5)'; pendFillCol='#ff7070'; }
+  ctxM.shadowColor = pendGlowCol; ctxM.shadowBlur = S.charge!==0?14:0;
+  ctxM.beginPath(); ctxM.arc(pendEndX,pendEndY,9,0,Math.PI*2);
+  const endg=ctxM.createRadialGradient(pendEndX-3,pendEndY-3,1,pendEndX,pendEndY,9);
+  endg.addColorStop(0,S.charge!==0?lighten(pendFillCol,40):lighten('#90a8b8',30));
+  endg.addColorStop(1,pendFillCol);
+  ctxM.fillStyle=endg; ctxM.fill();
+  ctxM.shadowBlur=0;
+  if(Math.abs(S.charge)>5){
+    ctxM.fillStyle='rgba(255,255,255,0.95)'; ctxM.font='bold 10px Space Mono';
+    ctxM.textAlign='center'; ctxM.textBaseline='middle';
+    ctxM.fillText(S.charge<0?'−':'+',pendEndX,pendEndY);
+  }
+
+  // Línea de referencia vertical
+  ctxM.setLineDash([3,4]);
+  ctxM.strokeStyle='rgba(255,255,255,0.07)'; ctxM.lineWidth=1;
+  ctxM.beginPath(); ctxM.moveTo(cx,pivotY+5); ctxM.lineTo(cx,pivotY+pendLen+5); ctxM.stroke();
+  ctxM.setLineDash([]);
+
+  // Etiqueta de comportamiento en fase 2
+  if(S.fase===2 && Math.abs(pendAngle)>2){
+    const label = pendAngle > 0 ? '↔ REPULSIÓN (mismo signo)' : '→ ATRACCIÓN (signo opuesto)';
+    const labelX = pendEndX + (pendAngle>0?14:-95);
+    ctxM.fillStyle='rgba(255,255,255,0.25)'; ctxM.font='8.5px DM Sans';
+    ctxM.textAlign='left'; ctxM.textBaseline='middle';
+    ctxM.fillText(label, labelX, pendEndY);
+  }
+
+  // Etiqueta "Cargado — Espera barra" en fase 1
+  if(S.fase===1 && Math.abs(pendAngle)<2){
+    ctxM.fillStyle='rgba(246,195,68,0.5)'; ctxM.font='8px Space Mono';
+    ctxM.textAlign='center'; ctxM.textBaseline='middle';
+    ctxM.fillText('✓ CARGADO — acerca barra de prueba', cx, pivotY+pendLen+22);
+  }
+
+  // ── CABLE DE DESCARGA ──
+  if (S.discharging && S.cableProgress > 0) {
+    drawDischargeCable(ctxM, cx, cy, RO);
+  }
+
+  // ── BARRA DE CARGA (fase 1, viene de la derecha) ──
+  if(S.barVisible) drawBar(ctxM, S.barX, cy-120, false);
+
+  // ── BARRA DE PRUEBA (fase 2, viene de la izquierda) ──
+  if(S.probeVisible) drawProbeBar(ctxM, S.probeX, cy-120);
+
+  if(S.groundActive) drawGround(ctxM,cx,cy+RO+20,S.groundAlpha);
+}
+
+function drawProbeBar(ctx, x, y) {
+  const mat  = PROBE_MATS.find(p=>p.id===S.probeMat);
+  const tela = PROBE_TELAS.find(p=>p.id===S.probeTela);
+  if(!mat) return;
+  const ps = S.probeSign;
+  const c = mat.id==='neutro' ? '#546e7a' : mat.color;
+
+  ctx.shadowColor = ps<0?'rgba(107,143,255,0.3)':ps>0?'rgba(255,107,107,0.3)':'transparent';
+  ctx.shadowBlur = ps!==0?12:0;
+
+  const bg=ctx.createLinearGradient(x,y,x+34,y+128);
+  bg.addColorStop(0,lighten(c,45)); bg.addColorStop(0.5,c); bg.addColorStop(1,darken(c,35));
+  ctx.fillStyle=bg; rr(ctx,x,y,34,128,5); ctx.fill();
+  ctx.strokeStyle=darken(c,25); ctx.lineWidth=1.5; ctx.shadowBlur=0;
+  rr(ctx,x,y,34,128,5); ctx.stroke();
+
+  // Nombre del material en la barra
+  ctx.save(); ctx.translate(x+17,y+64); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.font='bold 8px Space Mono';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(mat.name.substring(0,10).toUpperCase(),0,0); ctx.restore();
+
+  // Signos de carga en la barra
+  if(ps!==0){
+    const sym = ps<0?'−':'+';
+    ctx.fillStyle = ps<0?'rgba(107,143,255,0.9)':'rgba(255,107,107,0.9)';
+    ctx.font='bold 10px Space Mono'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    [[x-8,y+18],[x+42,y+35],[x-8,y+55],[x+42,y+75],[x-8,y+95]].forEach(([px,py])=>ctx.fillText(sym,px,py));
+  }
+
+  // Tela friccionante al lado
+  if(tela && tela.id!=='ninguna'){
+    rr(ctx,x+40,y+15,33,75,4); ctx.fillStyle='rgba(200,215,240,0.05)'; ctx.fill();
+    ctx.strokeStyle='rgba(200,215,240,0.1)'; ctx.lineWidth=1; ctx.stroke();
+    ctx.font='15px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(tela.icon,x+57,y+45);
+    ctx.fillStyle='rgba(140,160,200,0.55)'; ctx.font='6.5px Space Mono'; ctx.textAlign='center';
+    ctx.fillText(tela.name.substring(0,7).toUpperCase(),x+57,y+65);
+    // Carga calculada de la barra de prueba
+    const raw = getProbeCharge();
+    const chargeStr = raw>0?`+${raw}`:raw<0?`${raw}`:'0';
+    ctx.fillStyle = raw>0?'rgba(255,107,107,0.7)':raw<0?'rgba(107,143,255,0.7)':'rgba(90,100,128,0.6)';
+    ctx.font='bold 7px Space Mono';
+    ctx.fillText(`Q=${chargeStr}`,x+57,y+80);
+  }
+}
+
+function drawDischargeCable(ctx, cx, cy, RO) {
+  const startX  = cx - 35;
+  const startY  = cy + RO + 35;
+  const gndX    = cx - 35;
+  const gndY    = cy + RO + 110;
+  const currentY = startY + (gndY - startY) * S.cableProgress;
+  const glowA = S.cableGlow * 0.9;
+  const cableCol = `rgba(246,195,68,${0.55 + glowA * 0.4})`;
+
+  ctx.save(); ctx.lineCap = 'round';
+  if (glowA > 0.05) { ctx.shadowColor = `rgba(246,195,68,${glowA * 0.6})`; ctx.shadowBlur = 10 + glowA * 8; }
+  ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(gndX, currentY);
+  ctx.strokeStyle = cableCol; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.moveTo(startX + 0.8, startY); ctx.lineTo(gndX + 0.8, currentY);
+  ctx.strokeStyle = `rgba(255,235,160,${0.25 + glowA * 0.35})`; ctx.lineWidth = 1; ctx.stroke();
+
+  if (S.cableProgress >= 1) {
+    ctx.shadowColor = `rgba(246,195,68,${0.4 + glowA * 0.4})`; ctx.shadowBlur = 6 + glowA * 10;
+    [0, 8, 16].forEach((dy, i) => {
+      const hw = 14 - i * 4;
+      ctx.beginPath(); ctx.moveTo(gndX - hw, gndY + dy); ctx.lineTo(gndX + hw, gndY + dy);
+      ctx.strokeStyle = `rgba(246,195,68,${0.8 - i * 0.15})`; ctx.lineWidth = 2 - i * 0.4; ctx.stroke();
+    });
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = `rgba(246,195,68,${0.55 + glowA * 0.4})`; ctx.font = 'bold 8px Space Mono';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('GND', gndX, gndY + 22);
+    if (glowA > 0.1) {
+      const arrowType = S.charge < 0 ? 'e' : 'p';
+      const arrowCol  = arrowType === 'e' ? `rgba(107,143,255,${glowA * 0.9})` : `rgba(255,107,107,${glowA * 0.9})`;
+      const sym       = arrowType === 'e' ? '−' : '+';
+      const t = (performance.now() / 250) % 1;
+      [0.2, 0.5, 0.8].forEach((frac) => {
+        const offset = (frac + t) % 1;
+        const ay = startY + (gndY - startY) * offset;
+        ctx.fillStyle = arrowCol; ctx.font = 'bold 9px Space Mono';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(sym, gndX + 10, ay);
+      });
+    }
+  }
+  ctx.restore();
+}
+
+function drawGround(ctx,x,y,alpha){
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.strokeStyle='rgba(246,195,68,0.7)'; ctx.lineWidth=2; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,y+12); ctx.stroke();
+  [18,12,6].forEach((hw,i)=>{ ctx.beginPath(); ctx.moveTo(x-hw,y+12+i*7); ctx.lineTo(x+hw,y+12+i*7); ctx.stroke(); });
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(246,195,68,0.75)'; ctx.font='8px Space Mono'; ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('GND',x,y+36); ctx.restore();
+}
+
+function drawBar(ctx,x,y){
+  const m=MATERIALS.find(v=>v.id===S.material);
+  const t=TELAS.find(v=>v.id===S.tela);
+  const c=m?m.color:'#90a4ae';
+  ctx.shadowColor=S.barCharge<0?'rgba(107,143,255,0.28)':'rgba(255,107,107,0.28)'; ctx.shadowBlur=14;
+  const bg=ctx.createLinearGradient(x,y,x+34,y+128);
+  bg.addColorStop(0,lighten(c,45)); bg.addColorStop(0.5,c); bg.addColorStop(1,darken(c,35));
+  ctx.fillStyle=bg; rr(ctx,x,y,34,128,5); ctx.fill();
+  ctx.strokeStyle=darken(c,25); ctx.lineWidth=1.5; ctx.shadowBlur=0;
+  rr(ctx,x,y,34,128,5); ctx.stroke();
+  ctx.save(); ctx.translate(x+17,y+64); ctx.rotate(-Math.PI/2);
+  ctx.fillStyle='rgba(0,0,0,0.75)'; ctx.font='bold 8px Space Mono';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(m?m.name.substring(0,9).toUpperCase():'',0,0); ctx.restore();
+  const sym=S.barCharge<0?'−':S.barCharge>0?'+':'';
+  if(sym){
+    const cc=S.barCharge<0?'rgba(107,143,255,0.9)':'rgba(255,107,107,0.9)';
+    ctx.fillStyle=cc; ctx.font='bold 10px Space Mono'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    [[x-8,y+18],[x+42,y+35],[x-8,y+55],[x+42,y+75],[x-8,y+95]].forEach(([px,py])=>ctx.fillText(sym,px,py));
+  }
+  rr(ctx,x+40,y+15,33,75,4); ctx.fillStyle='rgba(200,215,240,0.05)'; ctx.fill();
+  ctx.strokeStyle='rgba(200,215,240,0.1)'; ctx.lineWidth=1; ctx.stroke();
+  ctx.font='15px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(t?t.icon:'·',x+57,y+50);
+  ctx.fillStyle='rgba(140,160,200,0.55)'; ctx.font='6.5px Space Mono'; ctx.textAlign='center';
+  ctx.fillText(t?t.name.substring(0,7).toUpperCase():'',x+57,y+72);
+}
+
+// ═══════════════════════════════════════════════
+// ANIMACIÓN PÉNDULO
+// ═══════════════════════════════════════════════
+function animPendulum(){
+  const d=S.targetPendAngle - S.pendAngle;
+  if(Math.abs(d)<0.12){ S.pendAngle=S.targetPendAngle; return; }
+  S.pendAngle += d*0.08;
+  requestAnimationFrame(animPendulum);
+}
+
+// ═══════════════════════════════════════════════
+// RESET
+// ═══════════════════════════════════════════════
+function doReset(){
+  S.charge=0; S.pendAngle=0; S.targetPendAngle=0;
+  S.barVisible=false; S.probeVisible=false;
+  S.animating=false; S.fase=0; S.probeSign=0;
+  S.probeMat='vidrio'; S.probeTela='seda';
+  S.groundActive=false; S.groundAlpha=0;
+  S.discharging=false; S.cableProgress=0; S.cableGlow=0; S.cableParticleTimer=0;
+  particles.length=0;
+  document.querySelectorAll('.probe-btn').forEach(b=>b.disabled=true);
+  // Restore default active selections in probe grids
+  document.querySelectorAll('[id^="probemat-"]').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('[id^="probetela-"]').forEach(b=>b.classList.remove('active'));
+  const dm=document.getElementById('probemat-vidrio'); if(dm) dm.classList.add('active');
+  const dt=document.getElementById('probetela-seda');  if(dt) dt.classList.add('active');
+  addLog('Sistema reiniciado — péndulo en reposo, electroscopio neutro.','neutral');
+}
+
+// ═══════════════════════════════════════════════
+// UI UPDATE
+// ═══════════════════════════════════════════════
+function updateUI(){
+  const c=S.charge; const sign=c<-5?-1:c>5?1:0; const mag=Math.abs(c);
+  const ew=Math.max(2,Math.min(97,50+(sign<0?mag*.44:sign>0?-mag*.3:0)));
+  const pw=Math.max(2,Math.min(97,50+(sign>0?mag*.44:sign<0?-mag*.3:0)));
+  document.getElementById('bar-e').style.width=ew+'%';
+  document.getElementById('bar-p').style.width=pw+'%';
+  const en=sign<0?`+${Math.round(mag/7)}`:sign>0?`-${Math.round(mag/7)}`:'0';
+  const pn=sign>0?`+${Math.round(mag/7)}`:sign<0?`-${Math.round(mag/7)}`:'0';
+  document.getElementById('cnt-e').textContent=en;
+  document.getElementById('cnt-p').textContent=pn;
+  document.getElementById('hdr-e').textContent=`e⁻ ${en}`;
+  document.getElementById('hdr-p').textContent=`p⁺ ${pn}`;
+  const sl=sign<0?'CARGA −':sign>0?'CARGA +':'NEUTRO';
+  const sc2=sign<0?'var(--neg)':sign>0?'var(--pos)':'var(--muted)';
+  document.getElementById('hdr-state').textContent=sl;
+  document.getElementById('hdr-state').style.color=sc2;
+  document.getElementById('hud-angle').textContent=Math.round(Math.abs(S.pendAngle))+'°';
+  const hs=document.getElementById('hud-sign');
+  hs.textContent=sign<0?'CARGA NEGATIVA':sign>0?'CARGA POSITIVA':'NEUTRO';
+  hs.style.color=sc2;
+
+  // Fase pill
+  const hf=document.getElementById('hud-fase-pill');
+  const hft=document.getElementById('hud-fase-t');
+  if(S.fase===1){ hf.style.display='flex'; hft.textContent='CARGADO — péndulo en reposo'; }
+  else if(S.fase===2){ hf.style.display='flex'; hft.textContent=S.method==='contacto'?'por contacto':'por inducción'; }
+  else { hf.style.display='none'; }
+
+  // Badge de estado
+  const badge=document.getElementById('status-badge');
+  if(S.fase===0){ badge.className='status-badge neutro'; badge.textContent='⚬ ELECTROSCOPIO NEUTRO'; }
+  else if(S.fase===1 && sign<0){ badge.className='status-badge cargado-neg'; badge.textContent='− CARGADO NEGATIVAMENTE'; }
+  else if(S.fase===1 && sign>0){ badge.className='status-badge cargado-pos'; badge.textContent='+ CARGADO POSITIVAMENTE'; }
+  else if(S.fase===2 && S.pendAngle>2){ badge.className='status-badge cargado-pos'; badge.textContent='↔ REPULSIÓN ACTIVA'; }
+  else if(S.fase===2 && S.pendAngle<-1){ badge.className='status-badge cargado-neg'; badge.textContent='→ ATRACCIÓN ACTIVA'; }
+  else if(S.fase===2){ badge.className='status-badge neutro'; badge.textContent='⚬ SIN RESPUESTA (neutro)'; }
+
+  // Fase box
+  const fb=document.getElementById('fase-box');
+  if(S.fase===0){
+    fb.innerHTML='<div class="fase-num">FASE 1 — CARGAR</div>Selecciona material, tela y método. Pulsa <strong style="color:#a8bbff">Cargar</strong> para transferir carga al electroscopio. El péndulo permanecerá inmóvil.';
+  } else if(S.fase===1){
+    fb.innerHTML=`<div class="fase-num">FASE 2 — INTERACCIÓN</div>El electroscopio está cargado. Selecciona una <strong style="color:#a8bbff">barra de prueba</strong> y pulsa "Acercar" para observar la respuesta del péndulo (repulsión o atracción).`;
+  } else {
+    fb.innerHTML=`<div class="fase-num">OBSERVACIÓN</div>Péndulo en ${Math.abs(Math.round(S.pendAngle))}°. Puedes descargar a tierra, cargar de nuevo, o acercar otra barra de prueba.`;
+  }
+
+  // Habilitar/deshabilitar botones
+  const probeBtns=document.querySelectorAll('.probe-btn');
+  const btnProbe=document.getElementById('btn-probe');
+  const btnDischarge=document.getElementById('btn-discharge');
+  const btnCharge=document.getElementById('btn-charge');
+
+  const isIdle = !S.animating && !S.discharging;
+  probeBtns.forEach(b=>{ b.disabled = (S.fase<1 || !isIdle); });
+  if(btnProbe) btnProbe.disabled = (S.fase<1 || !isIdle);
+  if(btnDischarge) btnDischarge.disabled = (S.charge===0 || !isIdle);
+  if(btnCharge) btnCharge.disabled = !isIdle;
+}
+
+// ═══════════════════════════════════════════════
+// LOG
+// ═══════════════════════════════════════════════
+function addLog(txt,type='neutral'){
+  const ul=document.getElementById('log');
+  const li=document.createElement('li'); li.className='log-entry '+type;
+  const d=new Date();
+  li.textContent=`[${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}] ${txt}`;
+  ul.prepend(li);
+  if(ul.children.length>16) ul.removeChild(ul.lastChild);
+}
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();}
+function hex2rgb(h){return{r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)};}
+function rgb2hex(r,g,b){return'#'+[r,g,b].map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');}
+function lighten(h,a){try{const c=hex2rgb(h);return rgb2hex(c.r+a,c.g+a,c.b+a);}catch{return h;}}
+function darken(h,a){try{const c=hex2rgb(h);return rgb2hex(c.r-a,c.g-a,c.b-a);}catch{return h;}}
+
+// ═══════════════════════════════════════════════
+// LOOP
+// ═══════════════════════════════════════════════
+function loop(){
+  atomAngle+=0.02;
+  updateParticles();
+  drawMain();
+  drawParticles();
+  drawAtom();
+  updateUI();
+  requestAnimationFrame(loop);
+}
+
+buildUI();
+addLog('Electroscopio iniciado — estado NEUTRO. Péndulo en reposo vertical.', 'neutral');
+addLog('FASE 1: Carga el electroscopio. El péndulo no se moverá.', 'info');
+addLog('FASE 2: Acerca una barra de prueba → péndulo responde (repele o atrae).', 'info');
+loop();
+</script>
+</body>
+</html>
